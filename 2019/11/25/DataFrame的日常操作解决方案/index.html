@@ -1,0 +1,132 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"><meta name="author" content="Arthur Gu"><meta name="renderer" content="webkit"><meta name="copyright" content="Arthur Gu"><meta name="keywords" content="Arthur's Blog"><meta name="description" content=""><meta name="Cache-Control" content="no-cache"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><title>DataFrame的日常操作解决方案 · Arthur's Blog</title><link rel="stylesheet" href="/css/style.css?v=2018.7.9"><link rel="stylesheet" href="/css/animation.css?v=2018.7.9"><link rel="icon" href="/img/assets/favicon.ico"><link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css?version=1.5.6"><!-- scripts--><script>(function( w ){
+  "use strict";
+  // rel=preload support test
+  if( !w.loadCSS ){
+    w.loadCSS = function(){};
+  }
+  // define on the loadCSS obj
+  var rp = loadCSS.relpreload = {};
+  // rel=preload feature support test
+  // runs once and returns a function for compat purposes
+  rp.support = (function(){
+    var ret;
+    try {
+      ret = w.document.createElement( "link" ).relList.supports( "preload" );
+    } catch (e) {
+      ret = false;
+    }
+    return function(){
+      return ret;
+    };
+  })();
+
+  // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+  // then change that media back to its intended value on load
+  rp.bindMediaToggle = function( link ){
+    // remember existing media attr for ultimate state, or default to 'all'
+    var finalMedia = link.media || "all";
+
+    function enableStylesheet(){
+      link.media = finalMedia;
+    }
+
+    // bind load handlers to enable media
+    if( link.addEventListener ){
+      link.addEventListener( "load", enableStylesheet );
+    } else if( link.attachEvent ){
+      link.attachEvent( "onload", enableStylesheet );
+    }
+
+    // Set rel and non-applicable media type to start an async request
+    // note: timeout allows this to happen async to let rendering continue in IE
+    setTimeout(function(){
+      link.rel = "stylesheet";
+      link.media = "only x";
+    });
+    // also enable media after 3 seconds,
+    // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+    setTimeout( enableStylesheet, 3000 );
+  };
+
+  // loop through link elements in DOM
+  rp.poly = function(){
+    // double check this to prevent external calls from running
+    if( rp.support() ){
+      return;
+    }
+    var links = w.document.getElementsByTagName( "link" );
+    for( var i = 0; i < links.length; i++ ){
+      var link = links[ i ];
+      // qualify links to those with rel=preload and as=style attrs
+      if( link.rel === "preload" && link.getAttribute( "as" ) === "style" && !link.getAttribute( "data-loadcss" ) ){
+        // prevent rerunning on link
+        link.setAttribute( "data-loadcss", true );
+        // bind listeners to toggle media back
+        rp.bindMediaToggle( link );
+      }
+    }
+  };
+
+  // if unsupported, run the polyfill
+  if( !rp.support() ){
+    // run once at least
+    rp.poly();
+
+    // rerun poly on an interval until onload
+    var run = w.setInterval( rp.poly, 500 );
+    if( w.addEventListener ){
+      w.addEventListener( "load", function(){
+        rp.poly();
+        w.clearInterval( run );
+      } );
+    } else if( w.attachEvent ){
+      w.attachEvent( "onload", function(){
+        rp.poly();
+        w.clearInterval( run );
+      } );
+    }
+  }
+
+
+  // commonjs
+  if( typeof exports !== "undefined" ){
+    exports.loadCSS = loadCSS;
+  }
+  else {
+    w.loadCSS = loadCSS;
+  }
+}( typeof global !== "undefined" ? global : this ) );</script><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js" defer></script><script src="/js/main.js?v=2018.7.9" defer></script><!-- fancybox--><link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'"><script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.js" defer></script><!-- busuanzi--><script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script></head><body><section class="profile-close" id="cxo-profile"><div class="profile-avatar"><i class="fa fa-caret-left"></i><img src="/img/assets/%E6%8A%98%E6%9C%A8%E5%A5%89%E5%A4%AA%E9%83%8E.jpg"></div><!--.profile-saying
+  i.fa.fa-comment
+  .saying--><div class="cxo-profile-inner"><div class="profile-name">Arthur</div><div class="friends"><div>FRIENDS</div><span><a href="https://pythonhunter.org/" target="_black">pythonhunter</a></span></div><div class="read-progress"></div></div></section><header id="cxo-intro" style="height: 70vh;background-image: url(/img/intro/index-bg.png);"><nav id="cxo-intro-nav"><section><div class="intro-nav-title"><a href="/">while True: learn()</a></div><div class="intro-nav-label-box"><a href="/">Home</a><a href="/about/">About</a><a href="/archives/">Archives</a><a href="/tags/">Tags</a></div><i class="fa fa-bars intro-nav-menu"><div class="intro-nav-drop"><a href="/">Home</a><a href="/about/">About</a><a href="/archives/">Archives</a><a href="/tags/">Tags</a></div></i><div class="clear"></div></section></nav><h1 class="post-title">DataFrame的日常操作解决方案</h1><div class="post-intros"><div class="post-intro-meta"><span class="post-intro-time"><i class="post-intro-calendar fa fa-edit"></i><span>2019-11-25</span></span><span class="post-intro-tags"><a class="intro-tag fa fa-tag" href="javascript:void(0)" target="_blank" rel="noopener" date-tags="python module"> python module</a></span></div></div></header><article class="cxo-up" id="cxo-content-outer"><section id="cxo-content-inner"><article class="article-entry" id="post"><h2 id="INSERT-ROW-增加一行数据"><a href="#INSERT-ROW-增加一行数据" class="headerlink" title="INSERT ROW 增加一行数据"></a>INSERT ROW 增加一行数据</h2><h3 id="loc（不推荐）"><a href="#loc（不推荐）" class="headerlink" title="loc（不推荐）"></a>loc（不推荐）</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">df = DataFrame(columns=(<span class="string">'lib'</span>, <span class="string">'qty1'</span>, <span class="string">'qty2'</span>))</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</span><br><span class="line">    df.loc[i] = [randint(<span class="number">-1</span>,<span class="number">1</span>) <span class="keyword">for</span> n <span class="keyword">in</span> range(<span class="number">3</span>)]</span><br><span class="line">print(df)</span><br><span class="line"><span class="comment">#     lib  qty1  qty2</span></span><br><span class="line"><span class="comment"># 0    0     0    -1</span></span><br><span class="line"><span class="comment"># 1   -1    -1     1</span></span><br><span class="line"><span class="comment"># 2    1    -1     1</span></span><br><span class="line"><span class="comment"># 3    0     0     0</span></span><br><span class="line"><span class="comment"># 4    1    -1    -1</span></span><br></pre></td></tr></table></figure>
+
+<p>loc方法可以接受一个列index，获取该index对应的列记录。其使用方法与字典的<code>sample[&#39;12&#39;]</code>类似，也支持对原本不存在的index进行赋值。<br><strong>优点</strong>：操作简便，和字典的操作习惯类似。<br><strong>缺点</strong>：如果已存在该index的话，就会造成数据替换。可能会报warning：A value is trying to be set on a copy of a slice from a DataFrame。</p>
+<h3 id="append（推荐）"><a href="#append（推荐）" class="headerlink" title="append（推荐）"></a>append（推荐）</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> pandas <span class="keyword">as</span> pd</span><br><span class="line"><span class="keyword">from</span> numpy.random <span class="keyword">import</span> randint</span><br><span class="line">df = pd.DataFrame(columns=(<span class="string">'lib'</span>, <span class="string">'qty1'</span>, <span class="string">'qty2'</span>))</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</span><br><span class="line">    s = pd.Series(&#123;<span class="string">'lib'</span>:randint(<span class="number">-1</span>,<span class="number">1</span>), <span class="string">'qty1'</span>:randint(<span class="number">-1</span>,<span class="number">1</span>), <span class="string">'qty2'</span>:randint(<span class="number">-1</span>,<span class="number">1</span>)&#125;)</span><br><span class="line">    <span class="comment"># 这里 Series 必须是 dict-like 类型</span></span><br><span class="line">    df = df.append(s, ignore_index=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p>append方法接受一个与DataFrame中column一致的Series对象，将其添加到尾端，效果和list的append使用方法类似。另外，如果这个被插入的Series对象没有设置index值的话，必须将append方法的ignore_index参数设为True。<br><strong>优点</strong>：操作简便，和列表的操作习惯类似。性能略优于loc方法。<br><strong>缺点</strong>：无。</p>
+<h2 id="INSERT-COLUMN-增加一列数据"><a href="#INSERT-COLUMN-增加一列数据" class="headerlink" title="INSERT COLUMN 增加一列数据"></a>INSERT COLUMN 增加一列数据</h2><h3 id="loc（不推荐）-1"><a href="#loc（不推荐）-1" class="headerlink" title="loc（不推荐）"></a>loc（不推荐）</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 准备数据</span></span><br><span class="line"><span class="keyword">import</span> pandas <span class="keyword">as</span> pd</span><br><span class="line"><span class="keyword">from</span> numpy.random <span class="keyword">import</span> randint</span><br><span class="line">df = pd.DataFrame(columns=(<span class="string">'lib'</span>, <span class="string">'qty1'</span>, <span class="string">'qty2'</span>))</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</span><br><span class="line">    s = pd.Series(&#123;<span class="string">'lib'</span>:randint(<span class="number">-1</span>,<span class="number">1</span>), <span class="string">'qty1'</span>:randint(<span class="number">-1</span>,<span class="number">1</span>), <span class="string">'qty2'</span>:randint(<span class="number">-1</span>,<span class="number">1</span>)&#125;)</span><br><span class="line"><span class="comment"># 增加列</span></span><br><span class="line">sLength = len(df2[<span class="string">'a'</span>])</span><br><span class="line">d = pd.Series(np.random.randn(sLength))</span><br><span class="line">df.loc[:, <span class="string">'qty3'</span>] = d <span class="comment"># 如果d是Series的话，赋予新列时会按index将d中的值赋值到新列中，如果是list的话，则依次赋值，没有index对应</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>缺点</strong>：可能会报warning：A value is trying to be set on a copy of a slice from a DataFrame。</p>
+<h3 id="assign（推荐）"><a href="#assign（推荐）" class="headerlink" title="assign（推荐）"></a>assign（推荐）</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 准备代码与loc中一样，以下为插入代码</span></span><br><span class="line">sLength = len(df2[<span class="string">'a'</span>])</span><br><span class="line">d = pd.Series(np.random.randn(sLength))</span><br><span class="line">df.assign(d1=d) <span class="comment"># 如果d是Series的话，赋予新列时会按index将d中的值赋值到新列中，如果是list的话，则依次赋值，没有index对应</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>优点</strong>：稳定不会报错，是官方推荐的处理方式。<br><strong>缺点</strong>：无<br><a href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.assign.html" target="_blank" rel="noopener">该方法的官方文档</a></p>
+<h2 id="SELECT-WHERE-根据行字段值选择记录"><a href="#SELECT-WHERE-根据行字段值选择记录" class="headerlink" title="SELECT WHERE 根据行字段值选择记录"></a>SELECT WHERE 根据行字段值选择记录</h2><h3 id="bool索引"><a href="#bool索引" class="headerlink" title="bool索引"></a>bool索引</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> pandas <span class="keyword">as</span> pd</span><br><span class="line"><span class="comment"># 准备数据</span></span><br><span class="line">d = &#123;<span class="string">'foo'</span>:[<span class="number">100</span>, <span class="number">111</span>, <span class="number">222</span>],</span><br><span class="line">     <span class="string">'bar'</span>:[<span class="number">333</span>, <span class="number">444</span>, <span class="number">555</span>]&#125;</span><br><span class="line">df = pd.DataFrame(d)</span><br><span class="line"><span class="comment"># df:</span></span><br><span class="line"><span class="comment">#    bar   foo</span></span><br><span class="line"><span class="comment"># 0  333   100</span></span><br><span class="line"><span class="comment"># 1  444   111</span></span><br><span class="line"><span class="comment"># 2  555   222</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># bool 值索引</span></span><br><span class="line">df[[<span class="literal">True</span>, <span class="literal">False</span>, <span class="literal">True</span>]] <span class="comment"># 或 df.loc[[True, False, True]]</span></span><br><span class="line"><span class="comment"># 都可以得到</span></span><br><span class="line"><span class="comment">#   bar foo</span></span><br><span class="line"><span class="comment">#0  333 100</span></span><br><span class="line"><span class="comment">#2  555 222</span></span><br></pre></td></tr></table></figure>
+
+<p>DataFrame的索引可以为bool值的序列来选取数据行（但是该序列的长度必须和DataFrame中的行数相等，否则会报错ValueError。<br>bool选择语法：</p>
+<ul>
+<li>列值等于某个值为筛选条件: <code>df[df[&#39;column_name&#39;] == some_value]</code> 如果是数值型，也可以采用<code>&gt;</code>和<code>&lt;</code></li>
+<li>列值等于某几个值中的一个: <code>df[df[&#39;column_name&#39;].isin(some_values)]</code> some_values 可以是单个变量，也可以是list 或者迭代器。</li>
+<li>多个筛选条件：<code>df[(df[&#39;column_name&#39; == some_value) &amp; (df[&#39;column_name&#39;].isin(some_values)]</code>。注意&amp;和|的优先级高于==，要给每个条件加括号。</li>
+<li>不等于或某个值的筛选：<code>df[df[&#39;column_name&#39;] != some_value]</code>和<code>df[~df[&#39;column_name&#39;].isin(some_values)]</code></li>
+</ul>
+<p><strong>优点</strong>：性能高<br><strong>缺点</strong>：代码可读性略差</p>
+<h3 id="query"><a href="#query" class="headerlink" title="query"></a>query</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">n = <span class="number">10</span></span><br><span class="line">df = pd.DataFrame(np.random.randint(n, size=(n, <span class="number">2</span>)), columns=list(<span class="string">'bc'</span>))</span><br><span class="line"><span class="comment">#    b  c</span></span><br><span class="line"><span class="comment"># 0  9  0</span></span><br><span class="line"><span class="comment"># 1  1  2</span></span><br><span class="line"><span class="comment"># 2  2  4</span></span><br><span class="line"><span class="comment"># 3  7  6</span></span><br><span class="line"><span class="comment"># 4  6  4</span></span><br><span class="line"><span class="comment"># 5  4  7</span></span><br><span class="line"><span class="comment"># 6  2  9</span></span><br><span class="line"><span class="comment"># 7  4  8</span></span><br><span class="line"><span class="comment"># 8  6  2</span></span><br><span class="line"><span class="comment"># 9  9  0</span></span><br><span class="line"></span><br><span class="line">df.query(<span class="string">'index &gt; b &gt; c'</span>)</span><br><span class="line"><span class="comment">#   b   c</span></span><br><span class="line"><span class="comment"># 8 6   2</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#可以采用的表达式很多,比如</span></span><br><span class="line">df.query(<span class="string">'(a &lt; b) &amp; (b &lt; c)'</span>)</span><br><span class="line">df.query(<span class="string">'a &lt; b and b &lt; c'</span>)</span><br><span class="line">df.query(<span class="string">'color == "red"'</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>优点</strong>：官方的推荐方法，可读性更好。<br><strong>缺点</strong>：性能比起bool索引稍微差一些。<br><a href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.query.html?highlight=query#pandas.DataFrame.query" target="_blank" rel="noopener">query方法的官方文档</a></p>
+<h2 id="查重"><a href="#查重" class="headerlink" title="查重"></a>查重</h2><h3 id="duplicated和drop-duplicates"><a href="#duplicated和drop-duplicates" class="headerlink" title="duplicated和drop_duplicates"></a>duplicated和drop_duplicates</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 准备数据</span></span><br><span class="line">df2 = pd.DataFrame(&#123;<span class="string">'a'</span>: [<span class="string">'one'</span>, <span class="string">'one'</span>, <span class="string">'two'</span>, <span class="string">'two'</span>, <span class="string">'two'</span>, <span class="string">'three'</span>, <span class="string">'four'</span>],</span><br><span class="line">                    <span class="string">'b'</span>: [<span class="string">'x'</span>, <span class="string">'y'</span>, <span class="string">'x'</span>, <span class="string">'y'</span>, <span class="string">'x'</span>, <span class="string">'x'</span>, <span class="string">'x'</span>],</span><br><span class="line">                    <span class="string">'c'</span>: np.random.randn(<span class="number">7</span>)&#125;)</span><br><span class="line">df2</span><br><span class="line"><span class="comment">#       a   b   c</span></span><br><span class="line"><span class="comment"># 0    one  x  1.469359</span></span><br><span class="line"><span class="comment"># 1    one  y -0.509652</span></span><br><span class="line"><span class="comment"># 2    two  x -0.438074</span></span><br><span class="line"><span class="comment"># 3    two  y -1.252795</span></span><br><span class="line"><span class="comment"># 4    two  x  0.777490</span></span><br><span class="line"><span class="comment"># 5  three  x -1.613898</span></span><br><span class="line"><span class="comment"># 6   four  x -0.212740</span></span><br><span class="line">df2.duplicates(<span class="string">'a'</span>)</span><br><span class="line">df2.duplicates([<span class="string">'b'</span>], keep=<span class="string">'last'</span>)</span><br><span class="line">df2.duplicates([<span class="string">'a'</span>, <span class="string">'b'</span>])</span><br><span class="line">df2.duplicates([<span class="string">'a'</span>, <span class="string">'b'</span>],</span><br></pre></td></tr></table></figure>
+
+<p>duplicate方法返回与原DataFrame行数相等的bool序列，指明对应的行是否是重复数据，可以用于传入DataFrame的索引进行数据过滤。<br>duplicated方法则会移除重复数据。<br>默认会保留重复数据中的第一个，可以通过给keep参数赋值为’last’保留最后一个或False来丢弃所有重复数据。<br><a href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.drop_duplicates.html?highlight=drop_duplicate" target="_blank" rel="noopener">drop_duplicates的官方文档</a></p>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><ul>
+<li><a href="http://127.0.0.1:53366/Dash/raultaft/doc/comparison_with_sql.html" target="_blank" rel="noopener">Comparison with SQL</a></li>
+<li><a href="https://blog.csdn.net/tanzuozhev/article/details/76735660" target="_blank" rel="noopener">跟着stackoverflow学Pandas：add one row in a pandas.DataFrame -DataFrame添加行</a></li>
+</ul>
+</article><!-- lincense--><div class="post-paginator"><a class="nextSlogan" href="/2019/11/25/%E7%94%A8Hexo%E4%B8%BB%E9%A2%98%E6%90%AD%E5%BB%BAGitPage%E5%8D%9A%E5%AE%A2/" title="用Hexo主题搭建GitPage博客"><span>NextPost ></span><br><span class="nextTitle">用Hexo主题搭建GitPage博客</span></a><div class="clear"></div></div><div id="comment"></div></section></article><footer id="cxo-footer-outer"><div id="cxo-footer-inner"><p class="footer-container"><span>Site by </span><a href="http://hexo.io" target="_blank" rel="noopener"><span>Hexo</span></a><span> | theme </span><a href="https://github.com/Longlongyu/hexo-theme-Cxo" target="_blank" rel="noopener"><span>Cxo</span></a></p><i class="fa fa-user"> </i><span id="busuanzi_value_site_uv"></span><span> | </span><i class="fa fa-eye"> </i><span id="busuanzi_value_site_pv"></span></div></footer><!-- catelog--><div class="toc-wrapper" style="top: 70vh;"><div class="toc-catalog"><i class="fa fa-list"> </i><span>CATALOG</span></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#INSERT-ROW-增加一行数据"><span class="toc-number">1.</span> <span class="toc-text">INSERT ROW 增加一行数据</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#loc（不推荐）"><span class="toc-number">1.1.</span> <span class="toc-text">loc（不推荐）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#append（推荐）"><span class="toc-number">1.2.</span> <span class="toc-text">append（推荐）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INSERT-COLUMN-增加一列数据"><span class="toc-number">2.</span> <span class="toc-text">INSERT COLUMN 增加一列数据</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#loc（不推荐）-1"><span class="toc-number">2.1.</span> <span class="toc-text">loc（不推荐）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#assign（推荐）"><span class="toc-number">2.2.</span> <span class="toc-text">assign（推荐）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SELECT-WHERE-根据行字段值选择记录"><span class="toc-number">3.</span> <span class="toc-text">SELECT WHERE 根据行字段值选择记录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#bool索引"><span class="toc-number">3.1.</span> <span class="toc-text">bool索引</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#query"><span class="toc-number">3.2.</span> <span class="toc-text">query</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#查重"><span class="toc-number">4.</span> <span class="toc-text">查重</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#duplicated和drop-duplicates"><span class="toc-number">4.1.</span> <span class="toc-text">duplicated和drop_duplicates</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考文章"><span class="toc-number">5.</span> <span class="toc-text">参考文章</span></a></li></ol></div><!-- top--><i class="fa fa-arrow-up close" id="go-up" aria-hidden="true"></i></body></html>
